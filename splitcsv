@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+
+# import packages
+use strict;
+use warnings;
+use Getopt::Std;
+use Text::CSV_XS;
+use File::Basename;
+use File::Util;
+use Cwd;
+
+# get options
+my $ds=File::Util->SL;
+my %options=();
+getopts("hi:l:", \%options);
+
+# output help contents
+if (defined $options{h}) {
+	usage();
+	exit 0;
+}
+
+# validate input file
+my $inputfile = $options{i} || "-";
+if ($inputfile ne "-" && !-f $inputfile) {
+	print STDERR "input file '$options{i}' not found.\n\n";
+	usage();
+	exit 1;
+}
+
+# format output prefix
+my $prefix;
+if ($#ARGV == -1) { # no prefix
+	if ($inputfile eq "-") { # no input file
+		$prefix = cwd() . $ds . "split.csv";
+	} else { # input file supplied
+		$prefix = dirname($inputfile) . $ds . fileparse($inputfile);
+	}
+} else { # prefix supplied
+	$prefix = $ARGV[0];
+	if (index($prefix, $ds) == -1) {
+		$prefix = (($inputfile eq "-") ? cwd() : dirname($inputfile)) . $ds . $prefix;
+	}
+}
+
+# set up parsing params
+my $lines = 0;
+my $files = -1;
+my $csv = Text::CSV_XS->new({ eol => $/, always_quote => 1, binary => 1 });
+my $perfile = abs(int($options{l} || 100000));
+open my $in, "<$inputfile";
+my $out;
+opennextfile();
+
+# cycle through each line.
+while (my $line = $csv->getline($in)) {
+	$lines++;
+	$csv->print($out, $line);
+	if ($lines >= $perfile) {
+		opennextfile();
+	}
+}
+
+
+#
+# automagically closes and re-opens the output file pointer, and handles
+# the incrementing of the suffix on the filename.
+#
+
+sub opennextfile {
+	if (defined $out && tell($out) != -1) {
+		close $out;
+	}
+	$lines = 0;
+	$files++;
+	open $out, ">" . $prefix . "." . sprintf("%03d", $files);
+};
+
+
+#
+# outputs the help text for this command.
+#
+
+sub usage {
+	print STDERR "usage: cutcsv.pl [-i input] [-l lines per file] output_prefix\n";
+	print STDERR "  -i: The input file to read from. If not specified (or specified as -), STDIN is assumed.\n";
+	print STDERR "  -l: The maximum number of lines to allow in a CSV file.\n";
+	print STDERR "  output_prefix: The prefix to add to the output files.\n";
+}
