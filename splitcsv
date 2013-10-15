@@ -49,6 +49,7 @@ my $files = -1;
 my $csv = Text::CSV_XS->new({ eol => $/, always_quote => 1, binary => 1 });
 my $perfile = abs(int($options{l} || 100000));
 open my $in, "<$inputfile";
+binmode($in, ":utf8");
 my $out;
 opennextfile();
 
@@ -74,6 +75,7 @@ sub opennextfile {
 	$lines = 0;
 	$files++;
 	open $out, ">" . $prefix . "." . sprintf("%03d", $files);
+	binmode($out, ":utf8");
 };
 
 
