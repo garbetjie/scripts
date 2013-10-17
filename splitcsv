@@ -46,11 +46,11 @@ if ($#ARGV == -1) { # no prefix
 # set up parsing params
 my $lines = 0;
 my $files = -1;
-my $csv = Text::CSV_XS->new({ eol => $/, always_quote => 1, binary => 1 });
+my $csv = Text::CSV_XS->new({ eol => $/, always_quote => 1, binary => 1, escape_char => '\\', allow_loose_escapes => 1 });
 my $perfile = abs(int($options{l} || 100000));
-open my $in, "<$inputfile";
-binmode($in, ":utf8");
 my $out;
+open my $in, "<$inputfile" or die("cannot open input file $inputfile");
+binmode($in, ":utf8");
 opennextfile();
 
 # cycle through each line.
@@ -84,7 +84,7 @@ sub opennextfile {
 #
 
 sub usage {
-	print STDERR "usage: cutcsv.pl [-i input] [-l lines per file] output_prefix\n";
+	print STDERR "usage: splitcsv.pl [-i input] [-l lines per file] output_prefix\n";
 	print STDERR "  -i: The input file to read from. If not specified (or specified as -), STDIN is assumed.\n";
 	print STDERR "  -l: The maximum number of lines to allow in a CSV file.\n";
 	print STDERR "  output_prefix: The prefix to add to the output files.\n";
