@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+"""
+
+This will ensure that the dynamic external IP address of my Raspberry Pi is always kept up to date, and updates my CloudFlare
+account with the new entry.
+
+There are 4 definitions that need to be made:
+  TOKEN: Your API token, as found in your CloudFlare account settings.
+  EMAIL: The email address you use with CloudFlare.
+  ROOTDOM: The root domain you will use, as referenced in CloudFlare (eg: example.org)
+  SUBDOM: The subdomain name that you will use (eg: home, for a full domain of home.example.org).
+
+"""
+
+import urllib
+import json
+import re
+
+# definitions
+TOKEN = 'YOUR_TOKEN_HERE'
+EMAIL = 'YOUR_EMAIL_HERE'
+ROOTDOM = '' # eg: example.org
+SUBDOM = '' # eg: home
+
+# fetch ip address
+ip = urllib.urlopen('http://garbers.co.za/ip').read()
+if isinstance(ip, str):
+    match = re.match("^(\d+\.\d+\.\d+\.\d+)$", ip)
+    if match is not None:
+        ip = match.group(0)
+    else:
+        ip = None
+else:
+    ip = None
+
+# invalid ip
+if not isinstance(ip, str):
+    print("IP not found.")
+    exit(1)
+
+# extract the record id
+post_data = {}
+post_data['tkn'] = TOKEN
+post_data['email'] = EMAIL
+post_data['a'] = 'rec_load_all'
+post_data['z'] = ROOTDOM
+res = urllib.urlopen('https://www.cloudflare.com/api_json.html', urllib.urlencode(post_data)).read()
+res = json.loads(res)
+try:
+    for zone_entry in res['response']['recs']['objs']:
+        if zone_entry['name'] == SUBDOM + '.' + ROOTDOM:
+            break
+except KeyError as e:
+    print 'Key \'' + e.message + '\' not found. Cannot update.'
+    print 'Response: ' + json.dumps(res, sort_keys=True, indent=2, separators=(',', ': '))
+    exit(1)
+
+# update the entry
+post_data = {}
+post_data['tkn'] = TOKEN
+post_data['email'] = EMAIL
+post_data['a'] = 'rec_edit'
+post_data['z'] = ROOTDOM
+post_data['type'] = 'A'
+post_data['id'] = zone_entry['rec_id']
+post_data['name'] = SUBDOM
+post_data['content'] = ip
+post_data['ttl'] = 300
+res = urllib.urlopen('https://www.cloudflare.com/api_json.html', urllib.urlencode(post_data)).read()
+res = json.loads(res)
+
+# check if it failed
+if 'result' not in res or res['result'].lower() != 'success':
+    print 'Not updated.'
+    print '  Message: ' + res['message']
+    print '  Response: ' + json.dumps(res, sort_keys=True, indent=2, separators=(',', ': '))
+    exit(1)
+
+# it worked!
+print 'Updated.'
