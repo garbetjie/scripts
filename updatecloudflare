@@ -1,26 +1,31 @@
 #!/usr/bin/env python
 """
 
-This will ensure that the dynamic external IP address of my Raspberry Pi is always kept up to date, and updates my CloudFlare
+This will ensure that the dynamic external IP address of my Raspberry Pi is always kept up to date, and updates your CloudFlare
 account with the new entry.
 
 There are 4 definitions that need to be made:
   TOKEN: Your API token, as found in your CloudFlare account settings.
   EMAIL: The email address you use with CloudFlare.
-  ROOTDOM: The root domain you will use, as referenced in CloudFlare (eg: example.org)
-  SUBDOM: The subdomain name that you will use (eg: home, for a full domain of home.example.org).
 
 """
 
 import urllib
 import json
 import re
+import sys
+
+# ensure subdomain and root domain given.
+if len(sys.argv) is not 3:
+    sys.stderr.write('ERROR: Subdomain or root domain not given.\n')
+    sys.stderr.write('usage: ' + sys.argv[0] + ' [root domain] [subdomain]\n')
+    sys.exit(1)
 
 # definitions
 TOKEN = 'YOUR_TOKEN_HERE'
 EMAIL = 'YOUR_EMAIL_HERE'
-ROOTDOM = '' # eg: example.org
-SUBDOM = '' # eg: home
+ROOTDOM = sys.argv[1] # eg: example.org
+SUBDOM = sys.argv[2] # eg: home
 
 # fetch ip address
 ip = urllib.urlopen('http://garbers.co.za/ip').read()
