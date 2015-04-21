@@ -13,6 +13,7 @@ There are 4 definitions that need to be made:
 import urllib.request
 import urllib.parse
 import json
+import os
 import re
 import sys
 
@@ -23,8 +24,16 @@ if len(sys.argv) is not 3:
     sys.exit(1)
 
 # definitions
-TOKEN = 'YOUR_TOKEN_HERE'
-EMAIL = 'YOUR_EMAIL_HERE'
+try:
+    TOKEN = os.environ['TOKEN']
+except KeyError:
+    TOKEN = 'YOUR_TOKEN_HERE'
+
+try:
+    EMAIL = os.environ['EMAIL']
+except KeyError:
+    EMAIL = 'YOUR_EMAIL_HERE'
+
 ROOTDOM = sys.argv[1] # eg: example.org
 SUBDOM = sys.argv[2] # eg: home
 
