@@ -10,32 +10,31 @@ There are 4 definitions that need to be made:
 
 """
 
-import urllib.request
-import urllib.parse
+import argparse
 import json
 import os
 import re
 import sys
+import urllib.request
+import urllib.parse
 
-# ensure subdomain and root domain given.
-if len(sys.argv) is not 3:
-    sys.stderr.write('ERROR: Subdomain or root domain not given.\n')
-    sys.stderr.write('usage: ' + sys.argv[0] + ' [root domain] [subdomain]\n')
-    sys.exit(1)
+# build argument parser
+try:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('ROOTDOM')
+    parser.add_argument('SUBDOM')
+    parser.add_argument('--token', dest='TOKEN', help='Cloudflare API key', required=True)
+    parser.add_argument('--email', dest='EMAIL', help='Cloudflare email address', required=True)
+    parsed = parser.parse_args(sys.argv[1:])
+except argparse.ArgumentError:
+    print("Cannot parse arguments.")
+    exit(1)
 
 # definitions
-try:
-    TOKEN = os.environ['TOKEN']
-except KeyError:
-    TOKEN = 'YOUR_TOKEN_HERE'
-
-try:
-    EMAIL = os.environ['EMAIL']
-except KeyError:
-    EMAIL = 'YOUR_EMAIL_HERE'
-
-ROOTDOM = sys.argv[1] # eg: example.org
-SUBDOM = sys.argv[2] # eg: home
+TOKEN = parsed.TOKEN
+EMAIL = parsed.EMAIL
+ROOTDOM = parsed.ROOTDOM # eg: example.org
+SUBDOM = parsed.SUBDOM # eg: home
 
 # fetch ip address
 ip = urllib.request.urlopen('http://garbers.co.za/ip').read().decode('ascii')
@@ -70,7 +69,7 @@ try:
             found = True
             break
 except KeyError as e:
-    print("Key '" + e.message + "' not found. Cannot update.")
+    print("Key " + str(e) + " not found. Cannot update.")
     print(json.dumps(res, sort_keys=True, indent=2, separators=(',', ': ')))
     exit(1)
 
