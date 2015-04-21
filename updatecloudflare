@@ -10,7 +10,8 @@ There are 4 definitions that need to be made:
 
 """
 
-import urllib
+import urllib.request
+import urllib.parse
 import json
 import re
 import sys
@@ -28,13 +29,10 @@ ROOTDOM = sys.argv[1] # eg: example.org
 SUBDOM = sys.argv[2] # eg: home
 
 # fetch ip address
-ip = urllib.urlopen('http://garbers.co.za/ip').read()
-if isinstance(ip, str):
-    match = re.match("^(\d+\.\d+\.\d+\.\d+)$", ip)
-    if match is not None:
-        ip = match.group(0)
-    else:
-        ip = None
+ip = urllib.request.urlopen('http://garbers.co.za/ip').read().decode('ascii')
+match = re.match("^(\d+\.\d+\.\d+\.\d+)$", ip)
+if match is not None:
+    ip = match.group(0)
 else:
     ip = None
 
@@ -49,15 +47,26 @@ post_data['tkn'] = TOKEN
 post_data['email'] = EMAIL
 post_data['a'] = 'rec_load_all'
 post_data['z'] = ROOTDOM
-res = urllib.urlopen('https://www.cloudflare.com/api_json.html', urllib.urlencode(post_data)).read()
-res = json.loads(res)
+res = urllib.request.urlopen(
+    'https://www.cloudflare.com/api_json.html',
+    urllib.parse.urlencode(post_data).encode()
+).read()
+res = json.loads(res.decode('ascii'))
+
+# has it been created?
+found = False
 try:
     for zone_entry in res['response']['recs']['objs']:
         if zone_entry['name'] == SUBDOM + '.' + ROOTDOM:
+            found = True
             break
 except KeyError as e:
-    print 'Key \'' + e.message + '\' not found. Cannot update.'
-    print 'Response: ' + json.dumps(res, sort_keys=True, indent=2, separators=(',', ': '))
+    print("Key '" + e.message + "' not found. Cannot update.")
+    print(json.dumps(res, sort_keys=True, indent=2, separators=(',', ': ')))
+    exit(1)
+
+if not found:
+    print("Domain '%s.%s' not found. Cannot update." % (SUBDOM, ROOTDOM))
     exit(1)
 
 # update the entry
@@ -71,15 +80,17 @@ post_data['id'] = zone_entry['rec_id']
 post_data['name'] = SUBDOM
 post_data['content'] = ip
 post_data['ttl'] = 300
-res = urllib.urlopen('https://www.cloudflare.com/api_json.html', urllib.urlencode(post_data)).read()
-res = json.loads(res)
+res = urllib.request.urlopen(
+    'https://www.cloudflare.com/api_json.html',
+    urllib.parse.urlencode(post_data).encode()
+).read()
+res = json.loads(res.decode('ascii'))
 
 # check if it failed
 if 'result' not in res or res['result'].lower() != 'success':
-    print 'Not updated.'
-    print '  Message: ' + res['message']
-    print '  Response: ' + json.dumps(res, sort_keys=True, indent=2, separators=(',', ': '))
+    print("Not updated:")
+    print(json.dumps(res, sort_keys=True, indent=2, separators=(',', ': ')))
     exit(1)
 
 # it worked!
-print 'Updated.'
+print("Updated.")
